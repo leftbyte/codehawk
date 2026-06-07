@@ -71,6 +71,7 @@ open BCHMemoryReference
 open BCHPreFileIO
 open BCHProofObligations
 open BCHSystemInfo
+open BCHSystemSettings
 open BCHUtilities
 open BCHVariable
 open BCHVariableNames
@@ -181,7 +182,7 @@ object (self)
 
   method private set_pointedto_struct_field_names
                    (level:int) (v:variable_t) (vname:string) (ty:btype_t) =
-    if level > 2 then () else
+    if level > (get_struct_field_nesting_level ()) then () else
       let cstruct = get_pointedto_struct ty in
       let _ = chlog#add "c-struct field names" cstruct#toPretty in
       cstruct#iter (fun fld ->

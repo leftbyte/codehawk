@@ -50,6 +50,12 @@ let exclude_function (s: string) = fns_excluded := s :: !fns_excluded
 let excluded_functions () = !fns_excluded
 
 
+let struct_field_nesting_level = ref 1
+let set_struct_field_nesting_level (level: int) =
+  struct_field_nesting_level := level
+let get_struct_field_nesting_level () = !struct_field_nesting_level
+
+
 let arm_typingrules_settings = H.create 23
 
 let _ =
