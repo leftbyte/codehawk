@@ -399,6 +399,9 @@ object (self)
        && (H.find arm_typingrules_settings name) == "enable"
     | _ -> false
 
+  method set_struct_field_nesting_level (level: int) =
+    set_struct_field_nesting_level level
+
 end
 
 

@@ -197,6 +197,9 @@ let speclist =
     ("-lineq_block_cutoff",
      Arg.Int system_settings#set_lineq_block_cutoff,
      "maximum number of basic blocks for function to be analyzed with relational analysis");
+    ("-struct_nesting_level",
+     Arg.Int system_settings#set_struct_field_nesting_level,
+     "maximum nesting level for struct field expressions (default: 1)");
     ("-preamble_cutoff", Arg.Int system_info#set_preamble_cutoff,
      "preamble cutoff factor for generating function entry points");
     ("-save_cfgs", Arg.Unit (fun () -> savecfgs := true),
