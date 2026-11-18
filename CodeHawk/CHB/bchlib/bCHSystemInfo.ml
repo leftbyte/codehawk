@@ -208,6 +208,7 @@ object (self)
   val mutable trampoline_payloads = []
   val mutable trampoline_wrappers = []
   val mutable trampoline_fallthroughaddrs = []
+  val mutable trampoline_exits = []
 
   val data_export_specs = H.create 3
 
@@ -422,6 +423,9 @@ object (self)
   method private add_trampoline_fallthroughaddr (addr: doubleword_int) =
     trampoline_fallthroughaddrs <- addr :: trampoline_fallthroughaddrs
 
+  method private add_trampoline_exit (addr: doubleword_int) =
+    trampoline_exits <- addr :: trampoline_exits
+
   method private add_inlined_block (faddr:doubleword_int) (baddr:doubleword_int) =
     let fd = functions_data#add_function faddr in
     begin
@@ -449,6 +453,9 @@ object (self)
   method is_trampoline_fallthroughaddr (a: doubleword_int) =
     List.fold_left (fun acc addr ->
         acc || (addr#equal a)) false trampoline_fallthroughaddrs
+
+  method is_trampoline_exit (a: doubleword_int) =
+    List.exists (fun addr -> addr#equal a) trampoline_exits
 
   method get_esp_adjustment (faddr:doubleword_int) (iaddr:doubleword_int) =
     if H.mem esp_adjustments_i iaddr#index then
@@ -1425,7 +1432,18 @@ object (self)
          begin
            logmsg "fallthrough" fallthroughaddr;
            self#add_trampoline_fallthroughaddr fallthroughaddr
-         end)
+         end);
+      (if node#hasNamedAttribute "exits" then
+         List.iter (fun s ->
+             let exitaddr =
+               fail_tvalue
+                 (trerror_record
+                    (LBLOCK [STR "read_xml_trampoline: exit "; STR s]))
+                 (string_to_doubleword s) in
+             begin
+               logmsg "exit" exitaddr;
+               self#add_trampoline_exit exitaddr
+             end) (nsplit ',' (node#getAttribute "exits")))
     end
 
   method private read_xml_trampolines (node: xml_element_int) =

@@ -7075,6 +7075,11 @@ object
   method is_trampoline_wrapper: doubleword_int -> bool
   method is_trampoline_fallthroughaddr: doubleword_int -> bool
 
+  (** [is_trampoline_exit addr] returns true if [addr] is the start of a
+      trampoline exit stub, which a trampoline payload branches to in order
+      to leave the trampoline by one of its exits.*)
+  method is_trampoline_exit: doubleword_int -> bool
+
   (** [is_thumb addr] returns true if the architecture includes (arm) thumb
       instructions and the virtual address [addr] is in a code section that
       is thumb. Otherwise returns false.*)
