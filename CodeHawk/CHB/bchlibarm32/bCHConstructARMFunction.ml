@@ -317,6 +317,14 @@ let get_successors
     (get_arm_assembly_instruction iaddr)
 
 
+(* Returns true if [s] is the bare address of a trampoline exit stub. *)
+let is_trampoline_exit_succ (s: ctxt_iaddress_t): bool =
+  is_iaddress s
+  && (match TR.to_option (string_to_doubleword s) with
+      | Some a -> system_info#is_trampoline_exit a
+      | None -> false)
+
+
 let construct_arm_assembly_block
       (faddr: doubleword_int)
       (baddr: doubleword_int):
@@ -392,6 +400,14 @@ let construct_arm_assembly_block
         ~returnsite:returnsite
         ~calltgt:inlinedfn#get_address in
 
+    (* A successor that is a trampoline exit stub leaves the inlined payload
+       for a block of the host function, so it keeps its host location
+       instead of receiving the inlined function's context. *)
+    let inlined_succ (s: ctxt_iaddress_t) =
+      if is_trampoline_exit_succ s then
+        Ok s
+      else
+        add_ctxt_to_ctxt_string faddr s functioncontext in
     let inlinedblocks =
       let inline_exit = (make_location_by_address faddr returnsite)#ci in
       List.map (fun (b: arm_assembly_block_int) ->
@@ -421,14 +437,13 @@ let construct_arm_assembly_block
                                __FILE__ __LINE__ e;
                              (ix + 1, xix, acc)
                            end)
-                         (add_ctxt_to_ctxt_string faddr s functioncontext))
+                         (inlined_succ s))
                      (1, exitixs, []) l in
                  (* add exits for remaining exit indices *)
                  succ @ (List.map (fun _ -> inline_exit) xix)
                else
                  List.map (fun s ->
-                     let newctxtstr =
-                       add_ctxt_to_ctxt_string faddr s functioncontext in
+                     let newctxtstr = inlined_succ s in
                      match newctxtstr with
                      | Ok ctxtstr -> ctxtstr
                      | Error e ->
@@ -615,12 +630,22 @@ let construct_arm_assembly_function
       match inlinedblocks with
       | [] -> block#get_successors
       | _ -> [] in
+    (* A trampoline payload does not own the exit stubs it branches to; they
+       are blocks of the host function that inlines the payload. *)
+    let blocksucc =
+      if system_info#is_trampoline_payload faddr then
+        List.filter (fun s -> not (is_trampoline_exit_succ s)) blocksucc
+      else
+        blocksucc in
+    (* Bare addresses among the successors of inlined blocks are blocks of
+       this function: the return site, and the trampoline exit stubs. *)
     let inlinedblocksucc =
       List.fold_left
         (fun acc b ->
           match b#get_successors with
           | [h] when is_iaddress h -> h::acc
-          | _ -> acc) [] inlinedblocks in
+          | l -> (List.filter is_trampoline_exit_succ l) @ acc)
+        [] inlinedblocks in
     begin
       set_block_entry baddr;
       newfnentries#addList newfes;
